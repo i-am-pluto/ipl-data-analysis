@@ -4,11 +4,10 @@ library(readr)
 library(ggplot2) 
 library(dplyr)
 library(tidyr)
-library(tidyverse)
 
 
-deliveries<-read.csv("/home/lutopc/Documents/ml/newp/IPL-Data-Analysis/IPL/deliveries.csv")
-matches<-read.csv("/home/lutopc/Documents/ml/newp/IPL-Data-Analysis/IPL/matches.csv")
+deliveries<-read.csv("/home/pluto/Documents/ml/newp/IPL-Data-Analysis/IPL/deliveries.csv")
+matches<-read.csv("/home/pluto/Documents/ml/newp/IPL-Data-Analysis/IPL/matches.csv")
 matches<-matches[matches$result=="normal",]
 
 ##########   Matches played in different cities  #########
@@ -17,7 +16,23 @@ ggplot(matches[which(!is.na(matches$city)),],aes(city,fill= city,rm.na=T)) +geom
     ylab("Number of Matches Played") +
     guides(fill=FALSE)
 
+##########   Matches won by the team vs the number of tosses won  #########
+team_stats <- matches %>%
+  group_by(winner) %>%
+  summarise(
+    tosses_won = sum(as.character(toss_winner) == as.character(winner)),
+    matches_won = n()
+  )
 
+ggplot(team_stats, aes(winner)) +
+  geom_bar(aes(y = matches_won/2, fill = "Matches won"), position = "stack", stat = "identity") +
+  geom_bar(aes(y = tosses_won/2, fill = "Tosses won"), position = "stack", stat = "identity") +
+  xlab("Team") +
+  ylab("Number of matches") +
+  ggtitle("Tosses won vs. matches won by team") +
+  scale_fill_manual(values = c( "Matches won" = "blue","Tosses won" = alpha("red", 0.5))) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(limits = c(0, max(team_stats$matches_won, team_stats$tosses_won)), expand = c(0, 0))
 
 ############  IS WINNING TOSS IN IPL HAS ADVANTAGE   ###########################
 matches$toss_match<-ifelse(as.character(matches$toss_winner)==as.character(matches$winner),"Won","Lost")
@@ -141,17 +156,14 @@ deliveries %>%
 
 
 
-
 ##########################  SEASON-WISE RUN COMPARISON   ####################################################
 
-deliveries %>% left_join(matches) %>% 
-    filter(batsman=="V Kohli"| batsman=="SK Raina" |batsman=="RG Sharma"|batsman=="G Gambhir") %>% 
-    group_by(batsman,season) %>% summarise(runs = sum(batsman_runs)) %>%
-    ggplot(aes(season,runs, col=batsman)) +geom_line(size= 1) + 
-    ggtitle("Season wise run comparison of top getters") +
-    scale_x_continuous(breaks = 2008:2016)
-
-
+deliveries %>% left_join(matches, by = c("match_id" = "id")) %>% 
+  filter(batsman=="V Kohli"| batsman=="SK Raina" |batsman=="RG Sharma"|batsman=="G Gambhir") %>% 
+  group_by(batsman,season) %>% summarise(runs = sum(batsman_runs)) %>%
+  ggplot(aes(season,runs, col=batsman)) +geom_line(size= 1) + 
+  ggtitle("Season wise run comparison of top getters") +
+  scale_x_continuous(breaks = 2008:2016)
 
 ################################ RUN VS BALL FACES OF TOP SCORERES   #############################
 
